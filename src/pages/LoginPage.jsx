@@ -31,9 +31,18 @@ export default function Login() {
         setLoading(false)
         if (res.data.token) {
           localStorage.setItem('token', res.data.token)
+          localStorage.setItem('user', JSON.stringify(res.data.user))
+
           showToast(isRegister ? 'Pendaftaran berhasil! Mengalihkan...' : 'Berhasil masuk!', 'success')
+          
           setTimeout(() => {
-            window.location.href = '/admin/dashboard'
+            const userRole = res.data.user?.role
+
+            if (userRole === 'admin') {
+              window.location.href = '/admin/dashboard'
+            } else {
+              window.location.href = '/'
+            }
           }, 1000)
         } else {
           showToast(res.data.message || 'Proses berhasil!', 'success')
@@ -47,7 +56,6 @@ export default function Login() {
   }
 
   const handleGoogleLogin = () => {
-    // Arahkan ke endpoint OAuth Google backend jika sudah siap
     showToast('Fitur login Google akan segera aktif!', 'success')
   }
 
@@ -55,7 +63,7 @@ export default function Login() {
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 sm:p-6 md:p-10 font-sans">
       {/* Toast Notification */}
       {toast.show && (
-        <div className="fixed top-6 right-6 z-50 animate-bounce-short">
+        <div className="fixed top-6 right-6 z-50">
           <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border text-white text-xs font-medium ${
             toast.type === 'success' ? 'bg-emerald-900/90 border-emerald-500/30' : 'bg-rose-900/90 border-rose-500/30'
           }`}>
@@ -65,10 +73,10 @@ export default function Login() {
         </div>
       )}
 
-      {/* Main Container Card Split Screen */}
+      {/* Main Split Screen Container */}
       <div className="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 border border-slate-200/60">
         
-        {/* Sisi Kiri: Form Input */}
+        {/* Form Inputs */}
         <div className="p-8 sm:p-12 flex flex-col justify-center">
           <div className="mb-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-extrabold uppercase tracking-widest mb-3">
@@ -157,7 +165,6 @@ export default function Login() {
               {loading ? 'Memproses...' : isRegister ? 'Daftar Sekarang' : 'Sign in'}
             </button>
 
-            {/* Tombol Google */}
             <button
               type="button"
               onClick={handleGoogleLogin}
@@ -173,7 +180,7 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Toggle Daftar / Masuk */}
+          {/* Toggle Register / Login */}
           <div className="text-center text-xs text-slate-500 mt-6">
             {isRegister ? (
               <p>
@@ -199,15 +206,14 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Sisi Kanan: Visual & Deskripsi Website Serenity SPA */}
+        {/* Visual Banner */}
         <div className="relative hidden md:flex flex-col justify-between p-10 bg-gradient-to-br from-emerald-900 via-emerald-800 to-slate-900 text-white overflow-hidden">
           <div className="absolute -top-12 -right-12 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-emerald-400/10 rounded-full blur-3xl"></div>
 
-          {/* Background SPA Image Overlay */}
           <img
             src="https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=1000&auto=format&fit=crop"
-            alt="Serenity SPA Therapy"
+            alt="Serenity SPA"
             className="absolute inset-0 w-full h-full object-cover opacity-25 mix-blend-overlay"
           />
 

@@ -1,21 +1,27 @@
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const navigate = useNavigate()
+  const token = localStorage.getItem('token')
+  let user = null
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      navigate('/admin/login')
-    }
-  }, [navigate])
+  try {
+    user = JSON.parse(localStorage.getItem('user') || 'null')
+  } catch {
+    user = null
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
     navigate('/admin/login')
+  }
+
+  if (!token || user?.role !== 'admin') {
+    return <Navigate to="/admin/login" replace />
   }
 
   return (

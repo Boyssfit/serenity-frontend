@@ -1,127 +1,70 @@
-import { useEffect, useState } from 'react'
-import axios from 'axios'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
+import { useProducts } from '../../utils/useProducts'
 
 export default function AdminDashboard() {
-  const [services, setServices] = useState([])
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+  const {
+    services,
+    categories,
+    isLoading,
+    servicesError,
+    categoriesIsLoading,
+    categoriesError,
+    updateProduct,
+    deleteProduct,
+    isUpdating,
+  } = useProducts()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editId, setEditId] = useState(null)
-
   const [formData, setFormData] = useState({
     nama: '',
     category_id: '',
     durasi: '60 Menit',
     harga: '',
-    deskripsi: ''
+    deskripsi: '',
   })
   const [fotoFile, setFotoFile] = useState(null)
-
-  const token = localStorage.getItem('token')
-
-  const fetchServices = () => {
-    axios.get('http://127.0.0.1:8000/api/services')
-      .then(res => {
-        setServices(res.data.data || [])
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error('Gagal mengambil data:', err)
-        setLoading(false)
-      })
-  }
-
-  const fetchCategories = () => {
-    axios.get('http://127.0.0.1:8000/api/categories')
-      .then(res => {
-        const catData = res.data.data || res.data || []
-        setCategories(catData)
-        if (catData.length > 0) {
-          setFormData(prev => ({ ...prev, category_id: catData[0].id }))
-        }
-      })
-      .catch(() => {
-        // Fallback jika endpoint kategori belum ada
-        setCategories([{ id: 1, nama: 'Pijat & Relaksasi' }])
-        setFormData(prev => ({ ...prev, category_id: 1 }))
-      })
-  }
-
-  useEffect(() => {
-    fetchServices()
-    fetchCategories()
-  }, [])
-
-  const openAddModal = () => {
-    setEditId(null)
-    setFormData({
-      nama: '',
-      category_id: categories[0]?.id || 1,
-      durasi: '60 Menit',
-      harga: '',
-      deskripsi: ''
-    })
-    setFotoFile(null)
-    setIsModalOpen(true)
-  }
 
   const openEditModal = (item) => {
     setEditId(item.id)
     setFormData({
       nama: item.nama || '',
-      category_id: item.category?.id || item.category_id || 1,
+      category_id: item.category?.id || item.category_id || categories[0]?.id || '',
       durasi: item.durasi || '60 Menit',
       harga: item.harga || '',
-      deskripsi: item.deskripsi || ''
+      deskripsi: item.deskripsi || '',
     })
     setFotoFile(null)
     setIsModalOpen(true)
   }
-  const handleSubmit = (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     const data = new FormData()
-    data.append('nama', formData.nama)
-    data.append('category_id', formData.category_id)
-    data.append('durasi', formData.durasi)
-    data.append('harga', formData.harga)
-    data.append('deskripsi', formData.deskripsi)
-    if (fotoFile) {
-      data.append('foto', fotoFile)
-    }
+    Object.entries(formData).forEach(([key, value]) => data.append(key, value))
+    if (fotoFile) data.append('foto', fotoFile)
 
-    // Biarkan Axios mengatur Content-Type secara otomatis untuk FormData
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-
-    if (editId) {
-      data.append('_method', 'PUT')
-      axios.post(`http://127.0.0.1:8000/api/services/${editId}`, data, config)
-        .then(() => {
-          fetchServices()
-          setIsModalOpen(false)
-        })
-        .catch(err => alert('Gagal memperbarui data: ' + (err.response?.data?.message || err.message)))
-    } else {
-      axios.post('http://127.0.0.1:8000/api/services', data, config)
-        .then(() => {
-          fetchServices()
-          setIsModalOpen(false)
-        })
-        .catch(err => alert('Gagal menambah data: ' + (err.response?.data?.message || err.message)))
+    try {
+      await updateProduct(editId, data)
+      toast.success('Layanan berhasil diperbarui.')
+      setIsModalOpen(false)
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Gagal memperbarui layanan.')
     }
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Yakin ingin menghapus layanan ini?')) return
-    axios.delete(`http://127.0.0.1:8000/api/services/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(() => fetchServices())
-      .catch(err => alert('Gagal menghapus data: ' + (err.response?.data?.message || err.message)))
+
+    try {
+      await deleteProduct(id)
+      toast.success('Layanan berhasil dihapus.')
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Gagal menghapus layanan.')
+    }
   }
 
   return (
@@ -133,15 +76,19 @@ export default function AdminDashboard() {
             <p className="text-slate-500 text-xs">Daftar semua paket terapi dan pijat</p>
           </div>
           <button
-            onClick={openAddModal}
+            onClick={() => navigate('/admin/add-service')}
             className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition cursor-pointer"
           >
             + Tambah Layanan
           </button>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="text-center py-8 text-slate-400 text-sm">Memuat data layanan...</div>
+        ) : servicesError ? (
+          <div className="text-center py-8 text-red-600 text-sm">
+            Gagal memuat layanan: {servicesError.message}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -168,7 +115,7 @@ export default function AdminDashboard() {
                       <td className="p-3 text-slate-600">{item.category?.nama || 'Umum'}</td>
                       <td className="p-3 text-slate-600">{item.durasi || '60 Menit'}</td>
                       <td className="p-3 font-semibold text-emerald-600">
-                        Rp {item.harga ? item.harga.toLocaleString('id-ID') : '0'}
+                        Rp {Number(item.harga || 0).toLocaleString('id-ID')}
                       </td>
                       <td className="p-3 flex justify-center gap-2">
                         <button
@@ -193,13 +140,10 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Modal Form Tambah / Edit */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
-            <h3 className="font-bold text-lg text-slate-900 mb-4">
-              {editId ? 'Edit Layanan SPA' : 'Tambah Layanan SPA Baru'}
-            </h3>
+            <h3 className="font-bold text-lg text-slate-900 mb-4">Edit Layanan SPA</h3>
 
             <form onSubmit={handleSubmit} className="space-y-3 text-xs">
               <div>
@@ -221,13 +165,23 @@ export default function AdminDashboard() {
                     value={formData.category_id}
                     onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
                     className="w-full border border-slate-200 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none bg-white"
+                    required
+                    disabled={categoriesIsLoading || Boolean(categoriesError) || categories.length === 0}
                   >
-                    {categories.map(cat => (
+                    {categoriesIsLoading && <option value="">Memuat kategori...</option>}
+                    {categoriesError && <option value="">Kategori gagal dimuat</option>}
+                    {!categoriesIsLoading && !categoriesError && categories.length === 0 && (
+                      <option value="">Kategori belum tersedia</option>
+                    )}
+                    {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.nama || cat.category || `Kategori ${cat.id}`}
                       </option>
                     ))}
                   </select>
+                  {categoriesError && (
+                    <p className="text-red-600 mt-1">Gagal memuat kategori: {categoriesError.message}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Durasi</label>
@@ -270,7 +224,7 @@ export default function AdminDashboard() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setFotoFile(e.target.files[0])}
+                  onChange={(e) => setFotoFile(e.target.files[0] || null)}
                   className="w-full border border-slate-200 rounded-lg p-2 focus:border-emerald-600 focus:outline-none file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
                 />
               </div>
@@ -285,9 +239,15 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-700 text-white rounded-lg font-semibold hover:bg-emerald-800 transition cursor-pointer"
+                  disabled={
+                    isUpdating ||
+                    categoriesIsLoading ||
+                    Boolean(categoriesError) ||
+                    categories.length === 0
+                  }
+                  className="px-4 py-2 bg-emerald-700 text-white rounded-lg font-semibold hover:bg-emerald-800 transition cursor-pointer disabled:opacity-60"
                 >
-                  Simpan
+                  {isUpdating ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>
             </form>

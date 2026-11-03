@@ -1,31 +1,46 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import AdminLayout from './layouts/AdminLayout'
+
+// Import Halaman Login
+import LoginPage from './pages/LoginPage'
+
+// Import Halaman Admin
+import AdminDashboard from './pages/adminpages/AdminDashboard'
+import ProductForm from './pages/adminpages/ProductForm'
+
+// Import Halaman Front/User
 import Dashboard from './pages/frontpages/Dashboard'
+import Jadwal from './pages/frontpages/Jadwal'
 import ProductDetail from './pages/frontpages/ProductDetail'
 import Saved from './pages/frontpages/Saved'
-import Jadwal from './pages/frontpages/Jadwal'
-import AdminDashboard from './pages/adminpages/AdminDashboard'
-import LoginPage from './pages/adminpages/LoginPage'
 
 export default function App() {
   return (
     <Routes>
-      {/* Frontpage Routes */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="product/:id" element={<ProductDetail />} />
-        <Route path="saved" element={<Saved />} />
-        <Route path="jadwal" element={<Jadwal />} />
+      <Route element={<MainLayout />}>
+      {/* Halaman Utama User / Landing Page */}
+      <Route path="/" element={<Dashboard />} />
+
+      {/* Halaman Fitur User */}
+      <Route path="/jadwal" element={<Jadwal />} />
+      <Route path="/saved" element={<Saved />} />
+      <Route path="/product/:id" element={<ProductDetail />} />
       </Route>
 
-      {/* Admin Auth Route */}
+      {/* Halaman Login & Register */}
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/admin/login" element={<LoginPage />} />
 
-      {/* Admin Dashboard Protected Routes */}
+      {/* Halaman Admin */}
       <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="add-service" element={<ProductForm />} />
       </Route>
+
+        {/* Redirect jika route tidak ditemukan */}
+        <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
